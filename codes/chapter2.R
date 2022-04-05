@@ -22,3 +22,5 @@ fb_df %>%
   summarize(ss = sum(sq_dev),
             var = ss / (length(facebook) -1),
             sd = sqrt(var))
+
+## 2.6.1 검정통계량
