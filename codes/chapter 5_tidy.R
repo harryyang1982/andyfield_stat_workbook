@@ -155,3 +155,57 @@ ggplot(download_tidy_tib, aes(sample = hygiene)) +
   labs(x = "Theoretical quantiles", y = "Sample Quantiles") +
   facet_grid(day~gender, scales = "free_x") +
   theme_minimal()
+
+data(r_exam)
+
+r_exam %>% 
+  pivot_longer(exam:numeracy, names_to="category", values_to="value") -> r_tidy_exam
+
+r_tidy_exam %>% 
+  ggplot(aes(x = value)) +
+  geom_histogram(bins=15, fill = "#56B4E9", color = "#336C8b", alpha = 0.2) + 
+  labs(y = "Frequency", title = "Scores") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  facet_wrap(uni~category, scales = "free", nrow = 2)
+
+r_tidy_exam %>% 
+  group_by(uni, category) %>% 
+  summarize(mean = mean(value, na.rm = TRUE),
+            median = median(value, na.rm = TRUE),
+            ci_upper = mean_cl_normal(value)$ymax,
+            ci_lower = mean_cl_normal(value)$ymin,
+            skew = skewness(value, na.rm = TRUE),
+            kurtosis = kurtosis(value, na.rm = TRUE)) %>% 
+  ungroup() %>% 
+  pivot_longer(mean:kurtosis, names_to = "category2", values_to = "values2") %>% 
+  pivot_wider(names_from = category, values_from = values2) %>% 
+  select(uni, stat=category2, exam, computer, lectures, numeracy)
+
+# 5.6. 정규성 검정
+# 5.6.1 shapiro-wilk test
+
+shapiro.test(r_exam$exam)
+shapiro.test(r_exam$numeracy)
+
+r_tidy_exam %>% 
+  group_by(uni, category) %>% 
+  summarize(statistic = shapiro.test(value)$statistic,
+            p.value = shapiro.test(value)$p.value)
+
+# 5.7 등분산성 검정
+library(car)
+r_tidy_exam %>% 
+  group_by(category) %>% 
+  summarize(Df = leveneTest(value, uni)$Df,
+            FValue = leveneTest(value, uni)$`F value`,
+            p.value = leveneTest(value, uni)$`Pr(>F)`)
+
+r_tidy_exam %>% 
+  mutate(log_tr = log(value),
+         sqrt_tr = sqrt(value),
+         rev_tr = 1 / value) %>% 
+  pivot_longer(value:rev_tr, names_to = "category2", values_to = "new_value") %>% 
+  ggplot(aes(new_value)) +
+  geom_histogram(bins = 15, fill = "#56B4E9", color = "#336C8b", alpha = 0.2) +
+  facet_wrap(uni+category~category2, scale = "free", nrow=4)
