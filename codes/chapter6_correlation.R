@@ -124,4 +124,7 @@ roaming_cats %>% mutate(sex = ifelse(sex == "Male", 0, 1)) %>%
   correlation(method = "biserial")
 
 exam_anxiety %>% 
-  correlation(partial = TRUE)
+  correlation(partial = TRUE,
+              digits = 3, 
+              ci_digits = 3)
+
