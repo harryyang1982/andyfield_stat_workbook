@@ -84,3 +84,64 @@ album_lm %>%
   tidy(conf.int = TRUE) %>% 
   dust() %>% 
   sprinkle(col = 2:7, round = 3)
+
+# 7.6 다중회귀: 기초 Fit a model with several predictor
+## Bivariate Correlations and scatterplots
+
+library(GGally)
+
+ggscatmat(album_sales, columns = c("adverts", "airplay", "image", "sales")) +
+  theme_minimal()
+
+album_full_lm <- lm(sales ~ adverts + airplay + image, data = album_sales, na.action = na.exclude)
+
+album_full_lm2 <- update(album_lm, .~. + airplay + image)
+
+album_full_lm
+album_full_lm2
+
+glance(album_full_lm)
+
+summary(album_full_lm)$r.squared %>% 
+  sqrt()
+
+### Compare Models
+anova(album_lm, album_full_lm) %>% 
+  tidy()
+
+### Parameter estimates
+
+summary(album_full_lm)
+confint(album_full_lm)
+
+tidy(album_full_lm, conf.int = TRUE) %>% 
+  mutate(across(where(is.numeric), ~round(., 3)))
+
+### Standardized betas
+library(parameters)
+model_parameters(album_full_lm, standardize = "refit", digits = 3)
+
+### influence measures
+
+album_full_rsd <- album_full_lm %>% 
+  augment() %>% 
+  rowid_to_column(var = "case_no")
+
+album_full_inf <- influence.measures(album_full_lm)
+
+album_full_inf <- album_full_inf$infmat %>% 
+  as_tibble() %>% 
+  rowid_to_column(var = "case_no")
+
+album_full_inf
+
+album_full_rsd <- album_full_rsd %>% 
+  left_join(., album_full_inf, by = "case_no") %>% 
+  select(-c(cook.d, hat))
+
+album_full_rsd
+
+### Variance Inflation Factor
+### 10이 넘으면 걱정할 필요가 있다.
+### 1이 넘으면 회귀모형 편향 가능
+
