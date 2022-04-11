@@ -145,3 +145,116 @@ album_full_rsd
 ### 10이 넘으면 걱정할 필요가 있다.
 ### 1이 넘으면 회귀모형 편향 가능
 
+library(car)
+vif(album_full_lm)
+
+1/vif(album_full_lm)
+
+vif(album_full_lm) %>% 
+  mean()
+
+### Casewise diagnostics
+
+get_cum_percent <- function(var, cut_off = 1.96){
+  ecdf_var <- abs(var) %>% ecdf()
+  100*(1-ecdf_var(cut_off))
+}
+
+album_full_rsd %>% 
+  summarize(
+    `z >= 1.96` = get_cum_percent(.std.resid),
+    `z >= 2.58` = get_cum_percent(.std.resid, cut_off = 2.58),
+    `z >= 3.29` = get_cum_percent(.std.resid, cut_off = 3.29))
+
+album_full_rsd %>% 
+  filter(abs(.std.resid) >= 1.96) %>%
+  select(case_no, .std.resid, .resid) %>%
+  arrange(.std.resid)
+
+album_full_inf %>% 
+  arrange(desc(cook.d)) %>% 
+  mutate(across(where(is.numeric), ~round(., 3)))
+
+album_full_inf %>% 
+  filter_at(
+    vars(starts_with("dfb")),
+    any_vars(abs(.) > 1)
+  ) %>% 
+  select(case_no, starts_with("dfb")) %>% 
+  mutate(
+    across(where(is.numeric), ~round(., 3))
+  )
+
+leverage_thresh <- 3*mean(album_full_inf$hat, na.rm = TRUE)                
+
+album_full_inf %>%
+  filter(
+    hat > leverage_thresh | !between(cov.r, 1 - leverage_thresh, 1 + leverage_thresh)
+  ) %>%  
+  select(case_no, cov.r, hat, cook.d) %>% 
+  mutate(
+    across(where(is.numeric), ~round(., 3))
+  ) 
+
+
+### Diagnostic Plots
+plot(album_full_lm, which = 4:6)
+plot(album_full_lm, which = c(1, 3))
+plot(album_full_lm, which = 2)
+
+### GGfortify
+
+library(ggfortify)
+autoplot(album_full_lm, which = 4:6,
+                  colour = "#5c97bf",
+                  smooth.colour = "#ef4836",
+                  alpha = 0.5,
+                  size = 1) + 
+  theme_minimal()
+
+autoplot(album_full_lm, which = c(1, 3),
+                  colour = "#5c97bf",
+                  smooth.colour = "#ef4836",
+                  alpha = 0.5,
+                  size = 1) + 
+  theme_minimal()
+
+autoplot(album_full_lm, which = 2,
+                  colour = "#5c97bf",
+                  smooth.colour = "#ef4836",
+                  alpha = 0.5,
+                  size = 1) + 
+  theme_minimal()
+
+### Robust linear model
+library(robust)
+album_full_rob <- lmRob(sales ~ adverts + airplay + image, data = album_sales, na.action = na.exclude)
+summary(album_full_rob)
+
+model_parameters(
+  album_full_lm,
+  robust = TRUE,
+  vcov.type = "HC4",
+  digits = 3
+)
+
+#### Bootstrap
+model_parameters(
+  album_full_lm,
+  bootstrap = TRUE,
+  digits = 3
+)
+
+### Bayes Factors
+library(BayesFactor)
+album_bf <- album_sales %>%
+  regressionBF(sales ~ adverts + airplay + image, rscaleCont = "medium", data = .)
+
+album_bf
+
+# Bayesian Parameter Estimates
+album_full_bf <- album_sales %>% 
+  lmBF(sales ~ adverts + airplay + image, rscaleCont = "medium", data = .)
+
+album_full_post <- posterior(album_full_bf, iterations = 10000)
+summary(album_full_post)
