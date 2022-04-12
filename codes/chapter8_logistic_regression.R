@@ -68,3 +68,22 @@ model1 %>%
   confint() %>% exp(.)
 
 # model2 prediction
+summary(model2)
+
+parameters::parameters(model2)
+anova(model1, model2)
+
+model2 %>% 
+  augment()
+
+model1 %>% 
+  augment() %>% 
+  rename(Residual = .resid,
+         `Cook's Distance`= .cooksd,
+         Leverage = .hat) %>% 
+  mutate(`DF beta (intercept)` = dfbeta(model1)[, 1] %>% round(., 3),
+         `DF beta (intervention)` = dfbeta(model1)[, 2] %>% round(., 3))
+
+data(package="discovr")
+data(raq)
+
