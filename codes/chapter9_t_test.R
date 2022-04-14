@@ -137,3 +137,71 @@ cloak_rm %>%
   qqplotr::stat_qq_point() +
   labs(x = "Theoretical quantiles", y = "Sample quantiles") +
   theme_minimal()
+
+# 종속 t검정
+
+cloak_rm_mod <- t.test(mischief ~ cloak, data = cloak_rm, paired = TRUE)
+cloak_rm_mod
+
+cloak_rm %>% 
+  sample_n(24) %>% 
+  t.test(mischief ~ cloak, data = ., paired = TRUE)
+
+cloak_rm %>% 
+  arrange(desc(id)) %>% 
+  t.test(mischief ~ cloak, data = ., paired = TRUE)
+
+# Robust tests of dependent means
+
+cloak_messy <- cloak_rm %>% 
+  pivot_wider(values_from = mischief, names_from = cloak)
+
+yuend(cloak_messy$Cloak, cloak_messy$`No cloak`)
+
+# Bayes factor for dependent means
+
+library(BayesFactor)
+cloak_rm_bf <- ttestBF(cloak_messy$Cloak, cloak_messy$`No cloak`, paired=TRUE, rescale = "medium")
+cloak_rm_bf
+
+posterior(cloak_rm_bf, iterations = 10000) %>% 
+  summary()
+
+1 / cloak_rm_bf
+
+# Effect sizes for dependent means
+
+cloak_rm %>% 
+  arrange(id) %>% 
+  cohens_d(mischief ~ cloak, data = ., paired = TRUE)
+
+cloak_rm %>% 
+  arrange(id) %>% 
+  hedges_g(mischief ~ cloak, data = ., paired = TRUE)
+
+t_to_r(t = cloak_mod$statistic, df_error = cloak_mod$parameter)
+
+spider_mod <- spider %>% 
+  t.test(anxiety ~ group, data =., paired = TRUE)
+
+spider %>% 
+  pivot_wider(values_from=anxiety, names_from=group) %>% 
+  unnest() -> spider_wide
+
+yuend(spider_wide$Picture, spider_wide$`Real Spider`)
+
+spider_bf <- ttestBF(spider_wide$Picture, spider_wide$`Real Spider`, paired=TRUE, rescale = "medium")
+spider_bf
+
+1 / spider_bf
+
+posterior(spider_bf, iterations = 5000) %>% 
+  summary()
+
+spider %>% 
+  cohens_d(anxiety ~ group, data = ., paired = TRUE)
+
+spider %>% 
+  hedges_g(anxiety ~ group, data = ., paired = TRUE)
+
+t_to_r(t = spider_mod$statistic, df_error = spider_mod$parameter)
